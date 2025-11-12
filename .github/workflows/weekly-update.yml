@@ -1,0 +1,53 @@
+name: Weekly Dashboard Update
+
+# 매주 월요일 오전 9시(KST)에 자동 실행
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # UTC 0시 = KST 9시 (월요일)
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+  
+  # CSV 파일이 푸시될 때도 실행
+  push:
+    paths:
+      - 'raw/*.csv'
+      - 'raw/*.xlsx'
+      - 'data/monthly/*.json'
+
+jobs:
+  generate-pages:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Generate weekly pages
+        run: |
+          cd scripts
+          python generate_weekly_pages.py --current
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add pages/ index.html
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 자동 생성: $(date +'%Y년 %m월') 주간 대시보드 페이지" && git push)
+      
+      - name: Deploy to Vercel
+        run: echo "Vercel이 자동으로 배포를 감지하고 진행합니다."
+
+
